@@ -155,17 +155,28 @@ class WebContentExtractor:
         markdown += f"> 原文链接: [{url}]({url})\n\n"
         
         # 遍历所有内容元素
+        processed_elements = set()  # 记录已处理的元素，避免重复
         for element in content_element.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'pre', 'img', 'blockquote', 'table']):
+            # 跳过已处理的元素
+            if id(element) in processed_elements:
+                continue
+            
             # 跳过指定的元素
             if self._should_skip_element(element):
                 continue
             
             tag_name = element.name
             
+            # 标记当前元素为已处理
+            processed_elements.add(id(element))
+            
+            # 如果是容器元素（blockquote, ul, ol, pre, table），标记其所有子元素为已处理
+            if tag_name in ['blockquote', 'ul', 'ol', 'pre', 'table']:
+                for child in element.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'ul', 'ol', 'pre', 'img', 'blockquote', 'table']):
+                    processed_elements.add(id(child))
+            
             # 处理标题
             if tag_name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
-                if tag_name == 'h1':
-                    continue  # 跳过H1，已在开头添加
                 level = int(tag_name[1])
                 text = self._process_text_with_format(element)
                 markdown += f"\n{'#' * level} {text}\n\n"
